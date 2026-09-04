@@ -1,0 +1,8 @@
+# Rust 构建产物
+/target
+
+# 备份/中间文件
+**/*.rs.bk
+*.o
+*.elf
+.DS_Store

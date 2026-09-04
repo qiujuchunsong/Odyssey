@@ -1,0 +1,8 @@
+[toolchain]
+profile = "minimal"
+# 与 rCore-Tutorial-v3 保持一致的 nightly（riscv 0.6.0 的 inline-asm
+# 依赖 asm_const 特性门控，asm_const 在 stable 1.82+ 已稳定，
+# stable 通道不允许 #![feature(asm_const)]，故必须使用 nightly）
+channel = "nightly-2025-02-18"
+components = ["rust-src", "llvm-tools", "rustfmt", "clippy"]
+targets = ["riscv64gc-unknown-none-elf"]
