@@ -5,3 +5,7 @@ edition = "2024"
 
 [dependencies]
 sbi-rt = { version = "0.0.2", features = ["legacy"] }
+# 与 rCore-Tutorial-v3 / Odyssey user 保持一致: riscv 0.6.0 (git rev 11d43cf)
+# 教程代码基于此版 API; 显式锁 rev 避免拉到仓库最新 master(新版 API 不兼容)
+riscv = { git = "https://github.com/rcore-os/riscv", rev = "11d43cf7cccb3b62a3caaf3e07a1db7449588f9a", features = ["inline-asm"] }
+lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
