@@ -10,8 +10,7 @@ use riscv::register::{
     stval, stvec,
 };
 
-global_asm!(include_str!("trap.s"));    // 内联 trap.s 汇编: __alltraps 负责保存现场, __restore 负责恢复。
-                                         // 它服务所有 trap(异常/中断); __restore 还被 batch 用来启动 app
+global_asm!(include_str!("trap.s"));    
 
 pub fn init() {
     unsafe extern "C" {

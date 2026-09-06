@@ -22,6 +22,7 @@ fn syscall(id: usize, args: [usize; 3]) -> isize {
         );
     }
     ret
+}
 
 /* fd表示文件描述符
 buffer.as_ptr() as usize获取字节切片首地址，buffer.len*()为字节数。因为内核态无法直接借用用户态的引用，所以要拆成起始地址与长度两个数字，后续在内核中会被拼接 */
