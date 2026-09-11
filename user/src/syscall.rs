@@ -3,6 +3,8 @@ use core::arch::asm;        // 使用asm宏，使该模块能够使用汇编语�
 /* 定义系统调用编号 */
 const SYSCALL_WRITE: usize = 64;
 const SYSCALL_EXIT: usize = 93;
+const SYSCALL_YIELD: usize =124;
+const SYSCALL_GET_TIME: usize = 169;
 
 /* 封装syscall()系统调用函数
    其本质为：把"我要干什么"写进寄存器，执行ecall。CPU硬件立刻陷入S态
@@ -33,4 +35,12 @@ pub fn sys_write(fd: usize, buffer: &[u8]) -> isize {
  */
 pub fn sys_exit(exit_code: i32) -> isize {
     syscall(SYSCALL_EXIT, [exit_code as usize, 0, 0])
+}
+
+pub fn sys_yield() -> isize {
+    syscall(SYSCALL_YIELD, [0, 0, 0])
+}
+
+pub fn sys_get_time() -> isize {
+    syscall(SYSCALL_GET_TIME, [0, 0, 0])
 }

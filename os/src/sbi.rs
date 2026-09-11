@@ -1,4 +1,10 @@
 /* SBI函数 */
+const SBI_SET_TIMER: usize = 0;
+
+pub fn set_timer(timer: usize) {
+    sbi_rt::set_timer(timer as _);
+}
+
 #[allow(deprecated)]                            // 抑制编译器对已弃用代码的警告。在项目中使用已弃用的功能或方法时，可以通过此属性避免警告。
 pub fn console_getchar() -> Option<char> {      // 获取输入字符，无输入返回 None
     let ret = sbi_rt::legacy::console_getchar();

@@ -1,8 +1,11 @@
 
 mod context;    // 引入context,提供TrapContext（陷入上下文）类型
 
-use crate::batch::run_next_app;     // 使用batch中的run_next_app
+use crate::trap::scause::Interrupt;
+ use riscv::register::sie;
+use crate::task::{ suspend_current_and_run_next, exit_current_and_run_next };     
 use crate::syscall::syscall;
+use crate::timer::set_next_trigger;
 use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
@@ -23,6 +26,10 @@ pub fn init() {
     }
 }
 
+pub fn enable_timer_interrupt() {
+    unsafe { sie::set_stimer(); }
+}
+
 // 陷入处理器函数，根据不同的Trap原因采取不同的处理方式
 #[unsafe(no_mangle)]
 pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
@@ -41,12 +48,16 @@ pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
         // 如果是存储错误，则提示发生存储错误并执行下一个app
         Trap::Exception(Exception::StoreFault) | Trap::Exception(Exception::StorePageFault) => {
             println!("[kernel] PageFault in application, kernel killed it.");
-            run_next_app();
+            exit_current_and_run_next();
         }
         // 如果是非法指令调用，则提示发生非法指令调用并执行下一个app
         Trap::Exception(Exception::IllegalInstruction) => {
             println!("[kernel] IllegalInstruction in application, kernel killed it.");
-            run_next_app();
+            exit_current_and_run_next();
+        }
+        Trap::Interrupt(Interrupt::SupervisorTimer) => {
+            set_next_trigger();
+            suspend_current_and_run_next();
         }
         // 如果都不满足，则显示未支持的Trap，并打印scause(原因)和stval(附加信息)
         _=> {
