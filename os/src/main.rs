@@ -2,6 +2,8 @@
 #![no_main]
 #![no_std]
 
+#![feature(alloc_error_handler)]
+
 // 引入所用的宏
 #[macro_use]
 mod console;
@@ -11,9 +13,15 @@ mod timer;
 mod lang_items;
 mod sbi;
 mod sync;
+mod mm;
 pub mod task;
 pub mod syscall;
 pub mod trap;
+
+
+
+extern crate alloc;
+extern crate bitflags;
 
 // 引入global_asm! 宏
 // 引入entry.asm 和 link_app.S 汇编文件
@@ -22,6 +30,7 @@ global_asm!(include_str!("entry.asm"));
 global_asm!(include_str!("link_app.S"));
 
 // 地址获取函数
+#[macro_export]
 macro_rules! linker_symbol_address {
     ($symbol:path) => {
         ($symbol as *const ()).addr()
@@ -44,11 +53,13 @@ pub fn rust_main() -> !{
         safe fn boot_stack_top(); // stack top
     } 
     clear_bss();                    // 清除.bss段（上机后必需操作）
-    trap::init();                   // 初始化trap
+    mm::init();
+    /* trap::init();                   // 初始化trap
     loader::load_apps();            // 加载应用
     trap::enable_timer_interrupt(); // 使能时钟中断
     timer::set_next_trigger();      // 设置下次时钟中断
     task::run_first_task();         // 运行第一个任务
+    */
     panic!("Unreachable in rust_main!")
 }
 
