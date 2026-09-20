@@ -1,11 +1,31 @@
 use crate::sync::UPSafeCell;
 
 
+pub struct FrameTracker {
+    pub ppn: PhysPageNum,
+}
+
+impl FrameTracker {
+    pub fn new(ppn: PhysPageNum) -> Self {
+        // page cleaning
+        let bytes_array = ppn.get_bytes_array();
+        for i in bytes_array {
+            *i = 0;
+        }
+        Self { ppn }
+    }
+}
+
+impl Drop for FrameTracker {
+    fn drop(&mut self) {
+        frame_dealloc(self.ppn);
+    }
+}
 
 trait FrameAllocator {
     fn new() -> Self;
     fn alloc(&mut self) -> Option<PhysPageNum>;
-    fn dealloc(&mut self, ppn: PhysPageNum)
+    fn dealloc(&mut self, ppn: PhysPageNum);
 }
 pub struct StackFrameAllocator {
     current: usize,
@@ -22,7 +42,7 @@ impl FrameAllocator for StackFrameAllocator {
         }
     }
     fn alloc(&mut self) -> Option<PhysPageNum> {
-        if let Some(ppn) = self.recycled.pop() {
+        if let Some(ppn) == self.recycled.pop() {
             Some(ppn.into())
         } else {
             if self.current = self.end {
@@ -68,4 +88,36 @@ pub fn init_frame_allocator() {
     FRAME_ALLOCATOR
         .exclusive_access()
         .init(PhysAddr::from(ekernel).ceil(), PhysAddr::from(MEMORY_END).floor());
+}
+
+pub fn frame_alloc() -> Option<FrameTracker> {
+    FRAME_ALLOCATOR
+        .exclusive_access()
+        .alloc()
+        .map(|ppn| FrameTracker::new(ppn))
+}
+
+fn frame_dealloc(ppn: PhysPageNum) {
+    FRAME_ALLOCATOR
+        .exclusive_access()
+        .dealloc(ppn);
+}
+
+
+#[allow(unused)]
+pub fn frame_allocator_test() {
+    let mut v: Vec<FrameTracker> = Vec::new();
+    for i in 0..5 {
+        let frame = frame_alloc().unwrap();
+        println!("{:?}", frame);
+        v.push(frame);
+    }
+    v.clear();
+    for i in 0..5 {
+        let frame = frame_alloc().unwrap();
+        println!("{:?}", frame);
+        v.push(frame);
+    }
+    drop(v);
+    println!("frame_allocator_test passed!");
 }
