@@ -18,14 +18,11 @@ impl TaskContext {
     }
 
     /// set task context {__restore ASM funciton, kernel stack, s_0..12 }
-    pub fn goto_restore(kstack_ptr: usize) -> Self {
-        unsafe extern "C" {     // 取得__restore的地址
-            unsafe fn __restore();
-        }
+    pub fn goto_trap_return(kstack_ptr: usize) -> Self {
         Self {
-            ra: __restore as usize, // 新任务首次被调度后，第一步就是“回到用户态”
-            sp: kstack_ptr,         // 初始 TrapContext 在内核栈上的地址（由 `init_app_cx` 放置）。
-            s: [0; 12],             // 新任务无需恢复callee-saved寄存器
+            ra: trap_return as usize,
+            sp: kstack_ptr,
+            s: [0; 12],
         }
     }
 }

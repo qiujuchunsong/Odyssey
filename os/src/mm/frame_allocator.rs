@@ -1,4 +1,9 @@
+use super::{PhysAddr, PhysPageNum};
+use crate::config::MEMORY_END;
 use crate::sync::UPSafeCell;
+use alloc::vec::Vec;
+use core::fmt::{self, Debug, Formatter};
+use lazy_static::*;
 
 
 pub struct FrameTracker {
@@ -13,6 +18,12 @@ impl FrameTracker {
             *i = 0;
         }
         Self { ppn }
+    }
+}
+
+impl Debug for FrameTracker {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!("FrameTracker:PPN={:#x}", self.ppn.0))
     }
 }
 

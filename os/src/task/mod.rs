@@ -27,40 +27,30 @@ pub struct TaskManager {
 
 // TaskManager 的内部可变状态： 任务表 + 当前任务下标
 struct TaskManagerInner {
-    // 定长数组，最多MAX_APP_NUM个TCB
-    tasks: [TaskControlBlock; MAX_APP_NUM],
+    tasks: Vec<TaskControlBlock>,
     current_task: usize,
 }
 
 // 运行时初始化全局变量
 // 需要lazy_static!
 lazy_static! {
-    /// Global variable: TASK_MANAGER
     pub static ref TASK_MANAGER: TaskManager = {
-        let num_app = get_num_app();            // 取得内嵌的app数量
-        let mut tasks = [TaskControlBlock {     // 初始化tasks
-            task_cx: TaskContext::zero_init(),  // 占位：真正的上下文在下面循环里覆盖
-            task_status: TaskStatus::UnInit,    // 初始状态：UnInit
-        }; MAX_APP_NUM];
-        // 为每个任务建立“出生现场”，并标记为可调度：
-        //   init_app_cx(i)        —— 在第 i 块内核栈顶放好初始 TrapContext，并返回它的地址
-        //   goto_restore(addr)    —— 把该地址包成 TaskContext(ra=__restore, sp=addr)，
-        //                            使任务首次被 __switch 选中时能经 __restore 进入用户态
-        //   status = Ready        —— 等待调度器挑选（首个任务稍后由 run_first_task 置为 Running）
-        for (i, task) in tasks.iter_mut().enumerate() {
-            task.task_cx = TaskContext::goto_restore(init_app_cx(i));
-            task.task_status = TaskStatus::Ready;
+        println!("init TASK_MANAGER");
+        let num_app = get_num_app();
+        println!("num_app = {}", num_app);
+        let mut tasks: Vec<TaskControlBlock> = Vec::new();
+        for i in 0..num_app {
+            tasks.push(TaskControlBlock::new(
+                get_app_data(i),
+                i,
+            ));
         }
-        // 赋值TaskManager
         TaskManager {
             num_app,
-            // UPSafeCell::new 是 unsafe: 调用者需保证单核独占使用
-            inner: unsafe {
-                UPSafeCell::new(TaskManagerInner {
-                    tasks,
-                    current_task: 0, // 指向 0 号任务；此刻还没有任务在 Running，稍后 run_first_task 会把 0 号置为 Running
-                })
-            },
+            inner: RefCell::new(TaskManagerInner {
+                tasks,
+                current_task: 0,
+            }),
         }
     };
 }
@@ -125,6 +115,17 @@ impl TaskManager {
                 inner.tasks[*id].task_status == TaskStatus::Ready
             })
     }
+
+    fn get_current_token(&self) -> usize {
+        let inner = self.inner.exclusive_access();
+        inner.tasks[inner.current_task].get_user_token()
+    }
+
+    /// Get the current 'Running' task's trap contexts.
+    fn get_current_trap_cx(&self) -> &'static mut TrapContext {
+        let inner = self.inner.exclusive_access();
+        inner.tasks[inner.current_task].get_trap_cx()
+    }
 }
 
 /* 
@@ -156,4 +157,11 @@ pub fn exit_current_and_run_next() {
     run_next_task();
 }
 
+pub fn current_user_token() -> usize {
+    TASK_MANAGER.get_current_token()
+}
+
+pub fn current_trap_cx() -> &'static mut TrapContext {
+    TASK_MANAGER.get_current_trap_cx()
+}
 
