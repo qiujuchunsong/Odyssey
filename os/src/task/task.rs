@@ -1,4 +1,7 @@
 use crate::task::context::TaskContext;
+use crate::mm::{MemorySet, MapPermission, PhysPageNum, VirtAddr, KERNEL_SPACE};
+use crate::trap::{TrapContext, trap_handler};
+use crate::config::{TRAP_CONTEXT, kernel_stack_position};
 
 // 自动派生Copy/Clone/PartialEq：便于按值传递、用 == 比较
 #[derive(Copy, Clone, PartialEq)]
@@ -11,14 +14,15 @@ pub enum TaskStatus {
 }
 
 // 任务控制块 包含任务状态与任务上下文
-// 派生 Copy 是必需的：task/mod.rs 用 [TaskControlBlock{..}; MAX_APP_NUM] 初始化数组需要它
-#[derive(Copy, Clone)]
 pub struct TaskControlBlock {
-    pub task_status: TaskStatus,    // 任务状态
-    pub task_cx: TaskContext,       // 任务上下文（内核栈 + 返回地址 + callee-saved）
+    pub task_status: TaskStatus,
+    pub task_cx: TaskContext,
     pub memory_set: MemorySet,
     pub trap_cx_ppn: PhysPageNum,
+    #[allow(unused)]
     pub base_size: usize,
+    pub heap_bottom: usize,
+    pub program_brk: usize,
 }
 
 impl TaskControlBlock {

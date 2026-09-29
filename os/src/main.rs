@@ -56,7 +56,6 @@ pub fn rust_main() -> !{
     mm::init();
     mm::remap_test();
     trap::init();                   // 初始化trap
-    loader::load_apps();            // 加载应用
     trap::enable_timer_interrupt(); // 使能时钟中断
     timer::set_next_trigger();      // 设置下次时钟中断
     task::run_first_task();         // 运行第一个任务

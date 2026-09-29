@@ -41,6 +41,12 @@ _num_app:
 
     for (idx, app) in apps.iter().enumerate() {
         println!("app_{}: {}", idx, app);
+        // 【ch4 变化】这里内嵌的必须是【ELF 文件本身】，而不是 ch3 那种用
+        // objcopy 出来的裸二进制 <app>.bin。
+        //   原因：ch4 的 MemorySet::from_elf() 要用 xmas-elf 解析 program header
+        //        （virtual_addr / mem_size / flags / offset ...），裸二进制没有任何
+        //        头部信息，一解析就报 "Did not find ELF magic number"。
+        //   ch3 之所以用 .bin：那时内核只是把字节整块拷到固定物理地址，不需要元信息。
         writeln!(
             f,
             r#"
@@ -48,7 +54,7 @@ _num_app:
     .global app_{0}_start
     .global app_{0}_end
 app_{0}_start:
-    .incbin "{2}{1}.bin"
+    .incbin "{2}{1}"
 app_{0}_end:"#,
             idx, app, TARGET_PATH
         )?;

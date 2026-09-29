@@ -1,5 +1,8 @@
 /* fs.rs(文件系统/输入输出类) 管文件*/
 
+use crate::mm::translated_byte_buffer;
+use crate::task::current_user_token;
+
 const FD_STDOUT: usize = 1;     // 标准输出模式
 
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {

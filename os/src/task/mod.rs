@@ -1,20 +1,21 @@
 mod context;
 mod switch;
-
-#[allow(clippy::module_inception)] // 显式允许该模块与父模块(task)同名
+#[allow(clippy::module_inception)]
 mod task;
 
-use crate::config::MAX_APP_NUM;
-use crate::loader::{get_num_app, init_app_cx};
+use crate::loader::{get_app_data, get_num_app};
 use crate::sbi::shutdown;
 use crate::sync::UPSafeCell;
+use crate::trap::TrapContext;
+use alloc::vec::Vec;
 use lazy_static::*;
 use switch::__switch;
 use task::{TaskControlBlock, TaskStatus};
 
+pub use context::TaskContext;
 
 
-pub use crate::task::context::TaskContext;
+
 
 // 任务管理器: 全局唯一实例 `TASK_MANAGER`，负责所有任务的状态迁移与切换。
 pub struct TaskManager {
@@ -45,12 +46,14 @@ lazy_static! {
                 i,
             ));
         }
-        TaskManager {
+       TaskManager {
             num_app,
-            inner: RefCell::new(TaskManagerInner {
-                tasks,
-                current_task: 0,
-            }),
+            inner: unsafe {
+                UPSafeCell::new(TaskManagerInner {
+                    tasks,
+                    current_task: 0,
+                })
+            },
         }
     };
 }
@@ -102,7 +105,13 @@ impl TaskManager {
             }
             // go back to user mode
         } else {
-            panic!("All applications completed!");
+            // 【ch4 变化】没有 Ready 任务 = 所有应用都跑完了 → 优雅关机
+            //   ch3 这里是 panic!("All applications completed!")：
+            //     panic 虽然也会走到 shutdown，但会打出难看的 panic 信息、
+            //     而且语义上"任务跑完"根本不是错误。
+            //   所以改成：打印一句 + shutdown(false)（false = 正常关机，不是故障）
+            println!("All applications completed!");
+            shutdown(false);
         }
     }
     // 查找下一个任务

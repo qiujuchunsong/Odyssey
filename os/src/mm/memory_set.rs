@@ -7,6 +7,7 @@ use crate::sync::UPSafeCell;
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use bitflags::bitflags;
 use core::arch::asm;
 use lazy_static::*;
 use riscv::register::satp;
@@ -27,7 +28,7 @@ unsafe extern "C" {
 
 lazy_static! {
     pub static ref KERNEL_SPACE: Arc<UPSafeCell<MemorySet>> = 
-        Arc::new(unsafe { UPSafeCell::new(MemorySet.new_kernel()) });
+        Arc::new(unsafe { UPSafeCell::new(MemorySet::new_kernel()) });
 }
 
 pub struct MemorySet {
@@ -46,13 +47,13 @@ impl MemorySet {
         self.page_table.token()
     }    
     fn push(&mut self, mut map_areas:MapArea, data: Option<&[u8]>) {
-        map_area.map(&mut self.page_table);
+        map_areas.map(&mut self.page_table);
         if let Some(data) = data {
-            map_area.copy_data(&self.page_table, data);
+            map_areas.copy_data(&self.page_table, data);
         }
-        self.areas.push(map_area);
+        self.areas.push(map_areas);
     }
-    fn insert_framed_area(
+    pub fn insert_framed_area(
         &mut self,
         start_va: VirtAddr,
         end_va: VirtAddr,
@@ -297,15 +298,15 @@ pub struct MapArea {
 
 impl MapArea {
     pub fn new(
-        strat_va: VitrAddr,
-        end_va: VitrAddr,
+        start_va: VirtAddr,
+        end_va: VirtAddr,
         map_type: MapType,
-        map_perm: MapPermission.
+        map_perm: MapPermission,
     ) -> Self {
         let start_vpn: VirtPageNum = start_va.floor();
         let end_vpn: VirtPageNum = end_va.ceil();
         Self {
-            vpn_rang: VPNRange::new(start_vpn, end_vpn),
+            vpn_range: VPNRange::new(start_vpn, end_vpn),
             data_frames: BTreeMap::new(),
             map_type,
             map_perm,
@@ -323,7 +324,7 @@ impl MapArea {
                 self.data_frames.insert(vpn, frame);
             } 
         }
-        let pte_flags = PTEFlags::from_bits(self.map_perm).unwrap();
+        let pte_flags = PTEFlags::from_bits(self.map_perm.bits).unwrap();
         page_table.map(vpn, ppn, pte_flags);
     }
     #[allow(unused)]
@@ -402,7 +403,7 @@ impl MapArea {
     }
 }
 
-#[derive(Copy, Clone, PatrialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum MapType {
     Identical,
     Framed,

@@ -1,3 +1,5 @@
+use crate::trap::trap_return;
+
 // TaskContext 任务上下文,保存ra, sp, s0 ~ s11 由被调用者保存的寄存器
 #[derive(Copy, Clone)]  // 赋予TaskContext默认的复制和克隆特性
 #[repr(C)]              // 以C语言的对齐规则插入填充,使ra/sp/s0~s11的内存布局严格对应switch.S里的偏移
