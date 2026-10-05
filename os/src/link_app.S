@@ -14,6 +14,17 @@ _num_app:
     .quad app_7_start
     .quad app_7_end
 
+.global _app_names
+_app_names:
+    .string "00power_3"
+    .string "01power_5"
+    .string "02power_7"
+    .string "03sleep"
+    .string "04load_fault"
+    .string "05store_fault"
+    .string "initproc"
+    .string "user_shell"
+
     .section .data
     .global app_0_start
     .global app_0_end

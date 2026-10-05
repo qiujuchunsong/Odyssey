@@ -15,17 +15,53 @@ pub enum TaskStatus {
 
 // 任务控制块 包含任务状态与任务上下文
 pub struct TaskControlBlock {
-    pub task_status: TaskStatus,
-    pub task_cx: TaskContext,
-    pub memory_set: MemorySet,
+    pub pid: PidHandle,
+    pub kernel_stack: KernelStack,
+    inner: UPSafeCell<TaskControlBlockInner>,
+}
+
+pub struct TaskControlBlockInner {
     pub trap_cx_ppn: PhysPageNum,
-    #[allow(unused)]
     pub base_size: usize,
+    pub task_cx: TaskContext,
+    pub task_status: TaskStatus,
+    pub memory_set: MemorySet,
+    pub parent: Option<Weak<TaskControlBlock>>,
+    pub children: Vec<Arc<TaskControlBlock>>,
+    pub exit_code: i32,
+    #[allow(unused)]
     pub heap_bottom: usize,
     pub program_brk: usize,
 }
 
+impl TaskControlBlockInner {
+    pub fn get_trap_cx(&self) -> &'static mut TrapContext {
+        self.trap_cx_ppn.get_mut()
+    }
+    pub fn get_user_token(&self) -> usize {
+        self.memory_set.token()
+    }
+    fn get_status(&self) -> TaskStatus {
+        self.task_status
+    }
+    pub fn is_zombie(&self) -> bool {
+        self.get_status() == TaskStatus::Zombie
+    }
+}
+
 impl TaskControlBlock {
+    pub fn inner_exclusive_access(&self) -> RefMut<'_, TaskControlBlockInner> {
+        self.inner.exclusive_access()
+    }
+    pub fn getpid(&self) -> usize {
+        self.pid.0
+    }
+    pub fn new(elf_data: &[u8]) -> Self {...}
+    pub fn exec(&self, elf_data: &[u8]) {...}
+    pub fn fork(self: &Arc<TaskControlBlock>) -> Arc<TaskControlBlock> {...}
+}
+
+/*  impl TaskControlBlock {
     pub fn get_trap_cx(&self) -> &'static mut TrapContext {
         self.trap_cx_ppn.get_mut()
     }
@@ -88,4 +124,4 @@ impl TaskControlBlock {
             None
         }
     }
-}
+}*/

@@ -39,7 +39,7 @@ macro_rules! println {                      // 定义println宏,接受一个格�
 }
 
 pub fn getchar() -> u8 {
-    let mut c =[0u8, 1];
+    let mut c =[0u8; 1];
     read(STDIN, &mut c);
     c[0]
 }
