@@ -8,6 +8,10 @@ edition = "2024"
 
 [dependencies]
 riscv = { git = "https://github.com/rcore-os/riscv", features = ["inline-asm"] } 
+# #[global_allocator] 的实例在 lib.rs 里，但没有这个依赖它根本连不上:
+#   error[E0432]: unresolved import `buddy_system_allocator`
+# 版本必须和 os 侧一致(0.6)，两边的 API(LockedHeap::empty / lock().init)才对得上
+buddy_system_allocator = "0.6"
 
 [profile.release]
 debug = true

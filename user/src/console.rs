@@ -2,10 +2,12 @@
 use super::write;                           // 引入 user_lib 顶层的 write 函数(内部封装 sys_write)
 /* fmt模块文档[https://doc.rust-lang.org/stable/std/fmt/index.html] */
 use core::fmt::{self, Write};               // 引入core库中的fmt模块和Write trait
+use crate::read;
+
+const STDIN: usize = 0;
+const STDOUT: usize = 1;                              // 定义常量STDOUT,表示标准输出的文件描述符
 
 struct Stdout;                              // 创建结构体Stdout,作为标准输出的实现
-
-const STDOUT: usize = 1;                              // 定义常量STDOUT,表示标准输出的文件描述符
 
 impl Write for Stdout {                     // 赋予Stdout Write trait
     fn write_str(&mut self, s: &str) -> fmt::Result {   
@@ -34,4 +36,10 @@ macro_rules! println {                      // 定义println宏,接受一个格�
     ($fmt: literal $(, $($arg: tt)+)?) => {
         $crate::console::print(format_args!(concat!($fmt, "\n") $(, $($arg)+)?));   // concat!($fmt, "\n")表示将格式字符串与换行符拼接，形成新的格式字符串
     }
+}
+
+pub fn getchar() -> u8 {
+    let mut c =[0u8, 1];
+    read(STDIN, &mut c);
+    c[0]
 }
