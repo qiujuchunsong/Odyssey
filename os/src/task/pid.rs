@@ -1,4 +1,9 @@
-use alloc::vec::Vec
+use crate::config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE};
+use crate::mm::{KERNEL_SPACE, MapPermission, VirtAddr};
+use alloc::vec::Vec;
+use crate::sync::UPSafeCell;
+use lazy_static::lazy_static;
+
 
 pub struct PidAllocator {
     current: usize,
@@ -13,11 +18,11 @@ impl PidAllocator {
         }
     }
     pub fn alloc(&mut self) -> PidHandle {
-        if let Some(pid) == self.recycled.pop() {
-            PidAllocator(pid)
+        if let Some(pid) = self.recycled.pop() {
+            PidHandle(pid)
         } else {
-            current += 1;
-            PidAllocator(self.current - 1)
+            self.current += 1;
+            PidHandle(self.current - 1)
         }
     }
     pub fn dealloc(&mut self, pid: usize) {

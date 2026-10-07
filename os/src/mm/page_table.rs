@@ -7,9 +7,10 @@
 //! 别的模块（memory_set）不直接碰 PTE 的位运算，一律通过 `map` / `unmap` / `translate`。
 
 // 兄弟模块通过super::调用
-use super::{FrameTracker, PhysPageNum, StepByOne, VirtAddr, VirtPageNum, frame_alloc};
+use super::{FrameTracker, PhysPageNum, StepByOne, PhysAddr, VirtAddr, VirtPageNum, frame_alloc};
 use alloc::vec;
 use alloc::vec::Vec;
+use alloc::string::String;
 // 引入bitflags，用于创建页表项标志位
 use bitflags::*;
 
@@ -180,6 +181,16 @@ impl PageTable {
     pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
         self.find_pte(vpn).map(|pte| *pte)
     }
+    pub fn translate_va(&self, va: VirtAddr) -> Option<PhysAddr> {
+        self.find_pte(va.clone().floor()).map(|pte| {
+            //println!("translate_va:va = {:?}", va);
+            let aligned_pa: PhysAddr = pte.ppn().into();
+            //println!("translate_va:pa_align = {:?}", aligned_pa);
+            let offset = va.page_offset();
+            let aligned_pa_usize: usize = aligned_pa.into();
+            (aligned_pa_usize + offset).into()
+        })
+    }
     /// 生成该页表的 satp 值：写进 satp CSR，或存进 TrapContext.kernel_satp 供切页表用
     ///
     /// `8usize << 60`：satp 高 4 位是 MODE，8 = Sv39（0 = 关闭分页）；低 44 位是根页表页号。
@@ -218,4 +229,35 @@ pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&
         start = end_va.into();
     }
     v
+}
+
+pub fn translated_str(token: usize, ptr: *const u8) -> String {
+    let page_table = PageTable::from_token(token);
+    let mut string = String::new();
+    let mut va = ptr as usize;
+    loop {
+        let ch: u8 = *(page_table.translate_va(VirtAddr::from(va)).unwrap().get_mut());
+        if ch == 0 {
+            break;
+        } else {
+            string.push(ch as char);
+            va += 1;
+        }
+    }
+    string
+}
+
+/// 把用户指针 `ptr`（类型 `*mut T`）翻译成内核可写的一块 `&mut T`
+///
+/// 谁在用：`sys_waitpid` 把子进程的 exit_code 写回用户态那个指针 ——
+/// 用户指针不能直接解引用（用户页带 U 位，且内容完全不可信），必须走页表翻译。
+/// 为什么返回 `&'static mut`：与 translated_byte_buffer 同样的"撒谎"（物理内存的 'static）；
+/// 真正的保证是"调用期间该地址空间还在、且没有别人同时改它"，由调用方负责。
+pub fn translated_refmut<T>(token: usize, ptr: *mut T) -> &'static mut T {
+    let page_table = PageTable::from_token(token);   // 只借来查表，不拥有任何页（见 from_token）
+    let va = ptr as usize;
+    page_table
+        .translate_va(VirtAddr::from(va))
+        .unwrap()
+        .get_mut()
 }

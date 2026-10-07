@@ -58,7 +58,12 @@ pub fn rust_main() -> !{
     trap::init();                   // 初始化trap
     trap::enable_timer_interrupt(); // 使能时钟中断
     timer::set_next_trigger();      // 设置下次时钟中断
-    task::run_first_task();         // 运行第一个任务
+    // 【ch5 启动流程变化】不再像 ch4 那样"开机把所有 app 一次性建成任务、跑第一个"，
+    // 而是只把 initproc 放进就绪队列：由它 fork+exec 拉起 user_shell，
+    // shell 再按名字 exec 别的 app。之后的控制流交给 run_tasks（idle 控制流）。
+    task::add_initproc();
+    task::run_tasks();
+
     
     panic!("Unreachable in rust_main!")
 }

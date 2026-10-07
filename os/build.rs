@@ -54,12 +54,19 @@ for app in apps.iter() {
         //        （virtual_addr / mem_size / flags / offset ...），裸二进制没有任何
         //        头部信息，一解析就报 "Did not find ELF magic number"。
         //   ch3 之所以用 .bin：那时内核只是把字节整块拷到固定物理地址，不需要元信息。
+        // ★【必须写 .align 3】上面那一串 `_app_names`（.string）长度不定，
+        //   会紧挨在第一个 app_{i}_start 之前，把 .incbin 进来的 ELF 起始地址顶歪。
+        //   而 xmas-elf 解析 ELF 头走的是 zero::read::<Header>()，它断言
+        //   "起始地址必须按 align_of::<Header>() = 8 对齐"，不对齐就直接在
+        //   zero-0.1.3/src/lib.rs:42 panic —— 报错里完全看不出是布局问题。
+        //   【教训】内核 bug 第一嫌疑人：链接脚本 / 构建脚本 / 常量，不是算法。
         writeln!(
             f,
             r#"
     .section .data
     .global app_{0}_start
     .global app_{0}_end
+    .align 3
 app_{0}_start:
     .incbin "{2}{1}"
 app_{0}_end:"#,

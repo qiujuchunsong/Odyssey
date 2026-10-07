@@ -1,7 +1,11 @@
-
+use alloc::sync::Arc;
+use super::TaskControlBlock;
+use alloc::collections::VecDeque;
+use crate::sync::UPSafeCell;
+use lazy_static::lazy_static;
 
 pub struct TaskManager {
-    ready_queue: Vecqueue<Arc<TaskControlBlock>>
+    ready_queue: VecDeque<Arc<TaskControlBlock>>
 }
 
 impl TaskManager {

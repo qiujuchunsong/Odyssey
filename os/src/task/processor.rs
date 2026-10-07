@@ -1,3 +1,12 @@
+use alloc::sync::Arc;
+use super::{TaskContext, TaskControlBlock};
+use super::TaskStatus;
+use super::fetch_task;
+use crate::task::__switch;
+use crate::trap::TrapContext;
+use crate::sync::UPSafeCell;
+use lazy_static::lazy_static;
+
 pub struct Processor {
     current: Option<Arc<TaskControlBlock>>,
     idle_task_cx: TaskContext,

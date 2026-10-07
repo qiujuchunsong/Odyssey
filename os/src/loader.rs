@@ -1,5 +1,7 @@
 //! Loading user applications into memory
 
+use alloc::vec::Vec;
+use lazy_static::lazy_static;
 /// Get the total number of applications.
 pub fn get_num_app() -> usize {
     unsafe extern "C" {
@@ -31,7 +33,7 @@ lazy_static! {
         unsafe extern "C" {
             safe fn _app_names();
         }
-        let mut start = linker_symbol_addr!(_app_names) as *const u8;
+        let mut start = _app_names as *const u8;
         let mut v = Vec::new();
         unsafe {
             for _ in 0..num_app {

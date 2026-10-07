@@ -162,6 +162,16 @@ impl PhysAddr {
     pub fn floor(&self) -> PhysPageNum { PhysPageNum(self.0 / PAGE_SIZE) }
     // 向下取整
     pub fn ceil(&self) -> PhysPageNum { PhysPageNum((self.0 + PAGE_SIZE - 1) / PAGE_SIZE) }
+    /// 把一个【带页内偏移的物理地址】（translate_va 算出来的那种）当作 T 访问。
+    ///
+    /// 与下面 `PhysPageNum::get_mut` 的分工：那个只会从"页首"开始，
+    /// 这个能带偏移 —— 因为 translated_str / translated_refmut 要翻译的是
+    /// 任意用户指针（比如 exit_code 指针），它不一定落在页首。
+    /// 隐含前提与 get_bytes_array 那段完全相同：恒等映射 + 该物理页没人回收 +
+    /// size_of::<T>() 不越界，三条都由调用者负责。
+    pub fn get_mut<T>(&self) -> &'static mut T {
+        unsafe { (self.0 as *mut T).as_mut().unwrap() }
+    }
 }
 
 /// 把 27 位虚拟页号拆成三级页表的下标：`[根表行号, 二级表行号, 叶子表行号]`
